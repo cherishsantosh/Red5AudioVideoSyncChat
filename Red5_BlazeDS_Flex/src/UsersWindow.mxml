@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" close="PopUpManager.removePopUp(this)">
+	<fx:Script>
+		<![CDATA[
+			import mx.managers.PopUpManager;
+			[Bindable]
+			public var usuarioActual:String;
+			public function setUsers(users:ArrayCollection):void {
+				this.users = users;
+			}
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<s:ArrayCollection id="users"/>
+	</fx:Declarations>
+	<s:layout>
+		<s:VerticalLayout paddingBottom="10" paddingLeft="10" paddingRight="10"
+						  paddingTop="10"/>
+	</s:layout>
+	<s:Label text="Bienvenido {usuarioActual}" paddingLeft="5" paddingBottom="5"
+			 paddingRight="5" paddingTop="5"/>
+	<s:List id="lstUsers" dataProvider="{users}" height="50%" width="100%"/>
+	<s:Label text="There is {users.length} users connected"/>
+</s:TitleWindow>

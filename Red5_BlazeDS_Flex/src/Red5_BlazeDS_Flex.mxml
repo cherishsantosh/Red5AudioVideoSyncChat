@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/mx" 
+			   minWidth="955" minHeight="600">
+	<fx:Script>
+		<![CDATA[
+			import mx.collections.ArrayCollection;
+			import mx.controls.Alert;
+			import mx.managers.PopUpManager;
+			
+			private var connection:NetConnection;
+			private var userWindow:UsersWindow;
+			private var timer:Timer;
+			//Streams
+			private var inStream:NetStream;
+			private var outStream:NetStream;
+			//Devices
+			private var camera:Camera;
+			private var microphone:Microphone;
+			//Video
+			private var inVideo:Video;
+			private var outVideo:Video;
+			
+			protected function btnConnect_clickHandler(event:MouseEvent):void
+			{
+				if(txtUsername.text.length >= 3){
+					userWindow = new UsersWindow();
+					timer = new Timer(2000);
+					timer.start();
+					timer.addEventListener(TimerEvent.TIMER, onTimerEvent);
+					currentState = "main";
+					connection = new NetConnection();
+					connection.connect("rtmp://localhost/Red5_BlazeDS_Java", txtUsername.text);
+					connection.addEventListener(NetStatusEvent.NET_STATUS, onConnectionStatus);
+					connection.client = this;
+				}else{
+					txtUsername.errorString = "Enter a valid name";
+				}
+			}
+			protected function onTimerEvent(event:TimerEvent):void {
+				connection.call("getConnectedClients", new Responder(onResult, onFault));
+			}
+			protected function onResult(obj:Object):void {
+				userWindow.setUsers(new ArrayCollection(obj as Array));
+			}
+			protected function onFault(obj:Object):void {
+				txtLog.text += "Error " + obj.fault.message + "\n";
+ 			}
+			protected function onConnectionStatus(event:NetStatusEvent):void {
+				if(event.info.code == "NetConnection.Connect.Success"){
+					txtLog.text += "Connection to RTMP successfully established\n";
+					connection.call("getConnectedClients", new Responder(onResult, onFault));
+					userWindow = UsersWindow(PopUpManager.createPopUp(this, UsersWindow, false));
+					PopUpManager.centerPopUp(userWindow);
+					userWindow.usuarioActual = txtUsername.text;
+				}else{
+					txtLog.text += "Connection to RTMP fail\n";
+				}
+			}
+
+			protected function btnBroadcast_clickHandler(event:MouseEvent):void
+			{
+				if(txtBroadcast.text.length > 3){
+					txtBroadcast.errorString = "";
+					//setup devices
+					camera = Camera.getCamera();
+					microphone = Microphone.getMicrophone();
+					//setup the streams
+					outStream = new NetStream(connection);
+					outStream.attachAudio(microphone);
+					outStream.attachCamera(camera);
+					outStream.publish(txtBroadcast.text);
+					//setup out video
+					outVideo = new Video(300,200);
+					outVideo.attachCamera(camera);
+					outVideoWrapper.addChild(outVideo)
+				}else{
+					txtBroadcast.errorString = "Put a valid broadcast name";
+				}
+			}
+
+
+			protected function btnSubscribe_clickHandler(event:MouseEvent):void
+			{
+				if(txtSubscribe.text.length > 3){
+					inStream = new NetStream(connection);
+					inStream.play(txtSubscribe.text);
+					inVideo = new Video(300,200);
+					inVideo.attachNetStream(inStream);
+					inVideoWrapper.addChild(inVideo);
+				}
+			}
+
+		]]>
+	</fx:Script>
+	<s:states>
+		<s:State name="login"/>
+		<s:State name="main"/>
+	</s:states>
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<s:Group verticalCenter="0" horizontalCenter="0" includeIn="login">
+		<s:Form>
+			<s:FormItem label="Username">
+				<s:HGroup>
+					<s:TextInput id="txtUsername"/>
+					<s:Button id="btnConnect" label="Login" click="btnConnect_clickHandler(event)"/>
+				</s:HGroup>
+			</s:FormItem>
+		</s:Form>
+	</s:Group>
+	<s:HGroup width="100%" height="100%" includeIn="main">
+		<s:VGroup width="30%" height="100%" paddingBottom="10" paddingLeft="10" paddingRight="10"
+				  paddingTop="10">
+			<s:Form width="100%">
+				<s:FormItem label="Broadcast" direction="ltr">
+					<s:HGroup>
+						<s:TextInput id="txtBroadcast"/>
+						<s:Button id="btnBroadcast" label="Broadcast" click="btnBroadcast_clickHandler(event)"/>
+					</s:HGroup>
+				</s:FormItem>
+			</s:Form>
+			<mx:UIComponent id="outVideoWrapper" width="300" height="200"/>
+			<s:Form>
+				<s:FormItem label="Subscribe">
+					<s:HGroup>
+						<s:TextInput id="txtSubscribe"/>
+						<s:Button id="btnSubscribe" label="Subscribe" click="btnSubscribe_clickHandler(event)"/>
+					</s:HGroup>
+				</s:FormItem>
+			</s:Form>
+			<mx:UIComponent id="inVideoWrapper" width="300" height="200"/>
+		</s:VGroup>
+	</s:HGroup>
+	<s:TextArea id="txtLog" width="100%" height="100" color="red" bottom="0"
+				editable="false" includeIn="main"/>
+</s:Application>
